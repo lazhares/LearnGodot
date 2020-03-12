@@ -1,0 +1,17 @@
+[gd_scene load_steps=4 format=2]
+
+[ext_resource path="res://JitterFreePixelArt.tres" type="Material" id=1]
+[ext_resource path="res://Sprites/PlaceHolder/Wall.png" type="Texture" id=2]
+[ext_resource path="res://Sprites/PlaceHolder/floor.png" type="Texture" id=3]
+
+[node name="Node2D" type="Node2D"]
+
+[node name="floor" type="Sprite" parent="."]
+material = ExtResource( 1 )
+position = Vector2( 129.714, 167.884 )
+texture = ExtResource( 3 )
+
+[node name="Wall" type="Sprite" parent="."]
+material = ExtResource( 1 )
+position = Vector2( 188.824, 118.643 )
+texture = ExtResource( 2 )
