@@ -1,0 +1,22 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://Sprites/PlaceHolder/Enemy.png" type="Texture" id=1]
+[ext_resource path="res://Scripts/enemy.gd" type="Script" id=2]
+[ext_resource path="res://HpContainer.tscn" type="PackedScene" id=3]
+[ext_resource path="res://enemy_movement.tres" type="Animation" id=4]
+
+[node name="Enemy" type="Sprite"]
+position = Vector2( 32, 128 )
+texture = ExtResource( 1 )
+offset = Vector2( 16, -16 )
+script = ExtResource( 2 )
+
+[node name="HpContainer" parent="." instance=ExtResource( 3 )]
+margin_left = 0.0
+margin_top = -16.0
+margin_right = 16.0
+margin_bottom = 0.0
+heart_size = 16
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+anims/MOVEMENT_UP = ExtResource( 4 )

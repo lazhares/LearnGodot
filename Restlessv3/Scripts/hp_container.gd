@@ -1,20 +1,24 @@
+#Class for hp UI
+class_name HpContainer 
+
 extends HBoxContainer
-var MaxHp:int setget set_max_hp
-var CurrentHp:int setget set_hp
-var Heart:Resource=preload("res://Heart.tscn")
-# Declare member variables here. Examples:
-# var a = 2
-# var b = "text"
 
 
-# Called when the node enters the scene tree for the first time.
-func _ready():
-	#self.MaxHp=9
-	#self.CurrentHp=5
-	pass # Replace with function body.
+var _Heart:PackedScene=preload("res://Heart.tscn") #HeartResource
+export var heart_size:int
+var max_hp:int setget set_max_hp
+var current_hp:int setget set_hp
+
+
+func _init(heart_size_value:int, max_hp_value:int):
+	heart_size=heart_size_value
+	self.max_hp=max_hp_value
+	self.current_hp=max_hp_value
+	
+
 
 func set_max_hp(value:int)->void:
-	MaxHp=value
+	max_hp=value
 # warning-ignore:integer_division
 	var HeartNumber:int=int((value-1)/4) + 1
 	#print(get_child_count(),",",HeartNumber)
@@ -22,11 +26,13 @@ func set_max_hp(value:int)->void:
 		margin_right=32*HeartNumber+margin_left
 # warning-ignore:unused_variable
 		for i in range (HeartNumber-get_child_count()):
-			add_child(Heart.instance())
+			var NewHeart:Heart=_Heart.instance()
+			NewHeart._init(heart_size)
+			add_child(NewHeart)
 			
 			
 func set_hp(value:int)->void:
-	CurrentHp=value
+	current_hp=value
 	for heart in get_children():
 		if value>4:
 			heart.HpValue=4
@@ -36,7 +42,7 @@ func set_hp(value:int)->void:
 			value=0
 
 	
-	
+
 	
 	
 # Called every frame. 'delta' is the elapsed time since the previous frame.

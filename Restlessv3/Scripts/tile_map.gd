@@ -1,6 +1,10 @@
 extends TileMap
 
 
+
+signal enable_player
+signal disable_player
+
 const MAXHEIGHT:int=80
 const MAXWIDTH:int=80
 const WALL:int=1
@@ -10,89 +14,100 @@ const ID:int=0
 const PASSABLE:int=1
 const INHABITANT:int=2
 
-signal enable_player
-signal disable_player
+const enemy_resource:PackedScene=\
+		preload("res://Enemy.tscn")
+const PlayerUp:Texture=\
+		preload("res://Sprites/PlaceHolder/Player_Up.png")
+const PlayerDown:Texture=\
+		preload("res://Sprites/PlaceHolder/Player_Down.png")
+const PlayerRight:Texture=\
+		preload("res://Sprites/PlaceHolder/Player_Right.png")
+const PlayerLeft:Texture=\
+		preload("res://Sprites/PlaceHolder/Player_Left.png")
+const Directions:PoolVector2Array=PoolVector2Array([
+	Vector2(0,-1),
+	Vector2(0,1),
+	Vector2(1,0),
+	Vector2(-1,0),
+	])
 
+const MapDirections:Dictionary={
+	KEY_KP_8:Vector2(0,-1),
+	KEY_KP_2:Vector2(0,1),
+	KEY_KP_4: Vector2(-1,0),
+	KEY_KP_6: Vector2(1,0),
+	}
 
-
-var PlayerNode:Sprite
-var EnemyNode:Sprite
-var CameraNode:Camera2D
-var PlayerUp:Texture=preload("res://Sprites/PlaceHolder/Player_Up.png")
-var PlayerDown:Texture=preload("res://Sprites/PlaceHolder/Player_Down.png")
-var PlayerRight:Texture=preload("res://Sprites/PlaceHolder/Player_Right.png")
-var PlayerLeft:Texture=preload("res://Sprites/PlaceHolder/Player_Left.png")
-var Directions:PoolVector2Array=PoolVector2Array([Vector2(0,-1),
-Vector2(0,1),Vector2(1,0),Vector2(-1,0)])
-var MapDirections={KEY_KP_8:Vector2(0,-1), KEY_KP_2:Vector2(0,1),
-KEY_KP_4: Vector2(-1,0), KEY_KP_6: Vector2(1,0)}
-var PlayerDirections={KEY_UP:Vector2(0,-1), KEY_DOWN:Vector2(0,1),
-KEY_LEFT: Vector2(-1,0), KEY_RIGHT: Vector2(1,0)}
-var SpriteDirections={}
-var PlayerControl:bool=false setget set_control
-var MapGraph:AStar2D=AStar2D.new()
-var MapInfo={}
+const PlayerDirections:Dictionary={
+	KEY_UP:Vector2(0,-1), KEY_DOWN:Vector2(0,1),
+	KEY_LEFT: Vector2(-1,0), 
+	KEY_RIGHT: Vector2(1,0),
+	}
+	
+const SpriteDirections:Dictionary={
+	KEY_UP:PlayerUp,
+	KEY_DOWN:PlayerDown,
+	KEY_LEFT: PlayerLeft, 
+	KEY_RIGHT:PlayerRight 
+	}
+var player_control:bool=false setget set_control
+var map_graph:AStar2D=AStar2D.new()
+var map_info:Dictionary={}
 #var CellId={}
 #var Passable={}
 #var Inhabitant={}
-
-
-
+var event_stash:Array=[]
+var PlayerNode:Character
+var EnemyNode:Enemy
+var CameraNode:Camera2D
+var HpManager:HpContainer
 #var MapDistances={}
 
 
+
 func _ready()->void:
+	
 	PlayerNode=get_node("Player")
-	EnemyNode=get_node("Enemy")
+	EnemyNode=enemy_resource.instance()
+	add_child(EnemyNode)
 	CameraNode=get_node("Camera")
-	SpriteDirections={KEY_UP:PlayerUp, KEY_DOWN:PlayerDown,
-KEY_LEFT: PlayerLeft, KEY_RIGHT:PlayerRight }
-	get_node("Enemy").add_to_group("Enemies")
+	EnemyNode.add_to_group("Enemies")
 	generate_map(0.7,4)
 	make_enemy(30)
-	self.PlayerControl=true
-
-
-
-
-
+	self.player_control=true 
 
 
 func _input(event:InputEvent)->void:
+	if not event.is_pressed():
+		return
+	
 	if event is InputEventKey and event.is_pressed() and \
-(event.scancode==KEY_UP or event.scancode==KEY_DOWN or \
-event.scancode==KEY_RIGHT or event.scancode==KEY_LEFT):
-		if PlayerControl==true:
+			(event.scancode==KEY_UP or event.scancode==KEY_DOWN or \
+			event.scancode==KEY_RIGHT or event.scancode==KEY_LEFT):
+		if player_control==true:
 			player_move(event.scancode)
 			get_tree().set_input_as_handled()
-			self.PlayerControl=false
+			self.player_control=false
 			enemyturn()
 		
 	if event is InputEventKey and event.is_pressed() and \
-event.scancode==KEY_ESCAPE:
+			event.scancode==KEY_ESCAPE:
 		get_tree().quit()
 		
 	if event is InputEventKey and event.is_pressed() and \
-event.is_action("map_move"):
+			event.is_action("map_move"):
 		pan_map(event.scancode)
-
-
-
-
-func game_loop()->void:
-	pass
 
 
 
 func set_control(var value:bool)->void:
 	match value:
 		true:
-			assert(PlayerControl==false)
-			PlayerControl=true
+			player_control=true
 			emit_signal("enable_player")
 		false: 
-			assert(PlayerControl==true)
-			PlayerControl=false
+			assert(player_control==true)
+			player_control=false
 			emit_signal("disable_player")
 	pass
 #func init_distances()->void:
@@ -124,29 +139,6 @@ func set_control(var value:bool)->void:
 
 
 
-func make_enemy(dist:int)->void:
-	var playermappos:Vector2=world_to_map(PlayerNode.position)
-	for j in range(dist):
-		for i in range(dist-j):
-			if get_cell(int(playermappos.x + i),
-			int(playermappos.y + dist-j-i))==EMPTY:
-				EnemyNode.position=CELLSIZE*Vector2(playermappos.x + i,playermappos.y + dist-j-i)
-				MapInfo[Vector2(playermappos.x + i,playermappos.y + dist-j-i)][INHABITANT]=\
-				EnemyNode
-				MapInfo[Vector2(playermappos.x + i,playermappos.y + dist-j-i)][PASSABLE]=\
-				false
-				#print(Vector2(playermappos.x + i,playermappos.y + dist-j-i))
-				return
-
-
-func player_move(direction:int)->void:
-	assert(PlayerDirections[direction]!=null)
-	var pos:Vector2= PlayerNode.position + CELLSIZE*PlayerDirections[direction]
-	var mappos:Vector2=world_to_map(pos)
-	if get_cell(int(mappos.x),int(mappos.y))==EMPTY and\
-	EnemyNode.position!=pos:
-		PlayerNode.position=pos
-		PlayerNode.texture=SpriteDirections[direction]
 
 	
 func pan_map(direction:int)->void:
@@ -158,17 +150,11 @@ func pan_map(direction:int)->void:
 
 
 
-func enemyturn()->void:
-	
-	var playerid:int=MapInfo[world_to_map(PlayerNode.position)][ID]
-	var enemyid:int=MapInfo[world_to_map(EnemyNode.position)][ID]
-	var path=MapGraph.get_id_path(enemyid,playerid)
-	EnemyNode.mappos=MapGraph.get_point_position(path[1])
-	yield(get_tree(), "idle_frame")
-	self.PlayerControl=true
-	return
 
 
+#########################################
+########################################
+# Map Generation
 
 
 
@@ -176,8 +162,8 @@ func generate_map(maxratio:float,iterations:int)->void:
 	#fill the map with walls
 	for i in range(MAXWIDTH):
 		for j in range(MAXHEIGHT):
-			set_cell(i,j,WALL)
-			MapInfo[Vector2(i,j)]=[null,false,null]
+			set_cell(i,j,WALL) 
+			map_info[Vector2(i,j)]=[null,false,null]
 	#Generate the binary tree
 	var bintree=BTree.new(Vector2(0,0),Vector2(MAXWIDTH-1,MAXHEIGHT-1))
 	randomize()
@@ -188,7 +174,7 @@ func generate_map(maxratio:float,iterations:int)->void:
 	#Tunneling and room creation with player spawn 
 	tunneling(bintree)
 	room_creation(bintree,true)
-	
+
 func tunneling(bintree:BTree)->void:
 	if bintree.child1==null or bintree.child2==null: return
 	#Horizontal Tunnel
@@ -222,7 +208,7 @@ func tunneling(bintree:BTree)->void:
 			add_cell_to_map(Vector2(centerv,i))
 	tunneling(bintree.child1)
 	tunneling(bintree.child2)
-	
+
 func room_creation(bintree:BTree,spawn:bool)->void:
 	if (not bintree.child1==null) or (not bintree.child1==null):
 		room_creation(bintree.child1,spawn)
@@ -234,45 +220,47 @@ func room_creation(bintree:BTree,spawn:bool)->void:
 	var end_v:int=int(bintree.pos_dr.y)  - randi()%4
 	if spawn==true:
 		PlayerNode.position=CELLSIZE*Vector2(begin_h,begin_v)
-		MapInfo[Vector2(begin_h,begin_v)][PASSABLE]=false
-		MapInfo[Vector2(begin_h,begin_v)][INHABITANT]=PlayerNode
+		map_info[Vector2(begin_h,begin_v)][PASSABLE]=false
+		map_info[Vector2(begin_h,begin_v)][INHABITANT]=PlayerNode
 	for i in range (begin_h,end_h+1):
 		for j in range (begin_v,end_v+1):
 			set_cell(i,j,EMPTY)
 			add_cell_to_map(Vector2(i,j))
-	
+
+func make_enemy(dist:int)->void:
+	var playermappos:Vector2=world_to_map(PlayerNode.position)
+	for j in range(dist):
+		for i in range(dist-j):
+			if get_cell(int(playermappos.x + i),
+			int(playermappos.y + dist-j-i))==EMPTY:
+				EnemyNode.position=CELLSIZE*Vector2(playermappos.x + i,playermappos.y + dist-j-i)
+				map_info[Vector2(playermappos.x + i,playermappos.y + dist-j-i)][INHABITANT]=\
+				EnemyNode
+				map_info[Vector2(playermappos.x + i,playermappos.y + dist-j-i)][PASSABLE]=\
+				false
+				#print(Vector2(playermappos.x + i,playermappos.y + dist-j-i))
+				return
 
 
 func add_cell_to_map(pos:Vector2)->void:
-	if  MapInfo[pos][ID]==null:
-		var id:int=MapGraph.get_available_point_id()
-		MapGraph.add_point(id,pos)
-		MapInfo[pos][ID]=id
-		MapInfo[pos][PASSABLE]=true
+	if  map_info[pos][ID]==null:
+		var id:int=map_graph.get_available_point_id()
+		map_graph.add_point(id,pos)
+		map_info[pos][ID]=id
+		map_info[pos][PASSABLE]=true
 		for v in Directions:
 			assert(v is Vector2)
-			if MapInfo.has(pos+v) and\
-			MapInfo[pos+v][ID]!=null and MapInfo[pos+v][PASSABLE]==true:
-				MapGraph.connect_points(id,MapInfo[pos+v][ID])
-				
+			if map_info.has(pos+v) and\
+			map_info[pos+v][ID]!=null and map_info[pos+v][PASSABLE]==true:
+				map_graph.connect_points(id,map_info[pos+v][ID])
+
 func disconnect_cell(pos:Vector2)->void:
-	assert(MapInfo.has(pos) and MapInfo[pos][ID]!=null)
-	MapInfo[pos][PASSABLE]=false
-	var posId:int=MapInfo[pos][ID]
-	for i in MapGraph.get_point_connections(posId):
-		MapGraph.disconnect_points(posId,i)
+	assert(map_info.has(pos) and map_info[pos][ID]!=null)
+	map_info[pos][PASSABLE]=false
+	var posId:int=map_info[pos][ID]
+	for i in map_graph.get_point_connections(posId):
+		map_graph.disconnect_points(posId,i)
 
-
-#func debug_tree(bintree:BTree):
-#	if (not bintree.child1==null) or (not bintree.child1==null):
-#		debug_tree(bintree.child1)
-#		debug_tree(bintree.child2)
-#		return
-#	var rect=ReferenceRect.new()
-#	rect.editor_only=false
-#	rect.rect_position=CELLSIZE*bintree.pos_ul
-#	rect.rect_size=CELLSIZE*(bintree.pos_dr-bintree.pos_ul)
-#	add_child(rect)
 
 class BTree:
 	var child1:BTree=null
@@ -343,6 +331,95 @@ class BTree:
 				child1.birth(maxratio,iterations-1)
 				child2.birth(maxratio,iterations-1)
 		return
+
+#func debug_tree(bintree:BTree):
+#	if (not bintree.child1==null) or (not bintree.child1==null):
+#		debug_tree(bintree.child1)
+#		debug_tree(bintree.child2)
+#		return
+#	var rect=ReferenceRect.new()
+#	rect.editor_only=false
+#	rect.rect_position=CELLSIZE*bintree.pos_ul
+#	rect.rect_size=CELLSIZE*(bintree.pos_dr-bintree.pos_ul)
+#	add_child(rect)
+
+###################################################################
+###################################################################
+
+
+
+#GAME_MASTER
+
+
+func game_loop()->void:
+	
+	pass
+
+func enemyturn()->void:
+	var CurrentEnemy:Enemy
+	var has_anybody_acted:bool=true
+	event_stash=[]
+	for CurrentEnemy in get_tree().get_nodes_in_group("Enemies"):
+		CurrentEnemy.add_to_group("ReadyEnemies")
+	while has_anybody_acted==true:
+		has_anybody_acted=false
+		for CurrentEnemy in get_tree().get_nodes_in_group("ReadyEnemies"):
+			if CurrentEnemy.take_turn(map_graph,map_info)==true:
+				CurrentEnemy.remove_from_group("ReadyEnemies")
+				has_anybody_acted=true
+			while not event_stash.empty():
+				request_action(event_stash.front())
+				event_stash.pop_front()
+		
+	
+	
+	
+	
+	var playerid:int=map_info[world_to_map(PlayerNode.position)][ID]
+	var enemyid:int=map_info[world_to_map(EnemyNode.position)][ID]
+	var path=map_graph.get_id_path(enemyid,playerid)
+	EnemyNode.mappos=map_graph.get_point_position(path[1])
+	yield(get_tree(), "idle_frame")
+	self.player_control=true
+	return
+
+
+func request_action(action:Array)->bool:
+	var action_name:String=action[0]
+	var action_args:Array=action[1]
+	return callv(action_name,action_args)
+
+
+
+
+func ATTACK_(attacker:Character,\
+ var attacked:Character, amount:int)->bool:
+	attacked.current_hp-=amount
+	return true
+	
+
+func MOVE_( actor:Character, destination:Vector2,\
+var blink:bool=false)->bool:
+	return true
+
+
+func player_move(direction:int)->void:
+	assert(PlayerDirections[direction]!=null)
+	var pos:Vector2= PlayerNode.position + CELLSIZE*PlayerDirections[direction]
+	var mappos:Vector2=world_to_map(pos)
+	if get_cell(int(mappos.x),int(mappos.y))==EMPTY and\
+	EnemyNode.position!=pos:
+		PlayerNode.position=pos
+		PlayerNode.texture=SpriteDirections[direction]
+
+
+func start_turn_animations()->void:
+	pass
+
+
+
+
+
 	
 	
 	

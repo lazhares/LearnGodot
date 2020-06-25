@@ -1,14 +1,12 @@
-[gd_scene load_steps=10 format=2]
+[gd_scene load_steps=8 format=2]
 
 [ext_resource path="res://Placeholdertileset.tres" type="TileSet" id=1]
-[ext_resource path="res://Scripts/TileMap.gd" type="Script" id=2]
+[ext_resource path="res://Scripts/tile_map.gd" type="Script" id=2]
 [ext_resource path="res://Sprites/PlaceHolder/Player.png" type="Texture" id=3]
 [ext_resource path="res://JitterFreePixelArt.tres" type="Material" id=4]
-[ext_resource path="res://Scripts/Main.gd" type="Script" id=5]
+[ext_resource path="res://Scripts/main.gd" type="Script" id=5]
 [ext_resource path="res://HpContainer.tscn" type="PackedScene" id=6]
-[ext_resource path="res://Scripts/Enemy.gd" type="Script" id=7]
-[ext_resource path="res://Sprites/PlaceHolder/Enemy.png" type="Texture" id=8]
-[ext_resource path="res://Scripts/Player.gd" type="Script" id=9]
+[ext_resource path="res://Scripts/player.gd" type="Script" id=7]
 
 [node name="Main" type="Control"]
 anchor_right = 1.0
@@ -138,11 +136,5 @@ current = true
 
 [node name="Player" type="Sprite" parent="WorldMap"]
 texture = ExtResource( 3 )
-offset = Vector2( 16, 16 )
-script = ExtResource( 9 )
-
-[node name="Enemy" type="Sprite" parent="WorldMap"]
-position = Vector2( 32, 128 )
-texture = ExtResource( 8 )
 offset = Vector2( 16, 16 )
 script = ExtResource( 7 )

@@ -8,8 +8,9 @@ var CameraNode:Camera2D
 
 # Called when the node enters the scene tree for the first time.
 func _ready()->void:
-	get_node("UI/HpContainer").MaxHp=8
-	get_node("UI/HpContainer").CurrentHp=5
+	get_node("UI/HpContainer").max_hp=8
+	get_node("UI/HpContainer").current_hp=5
+	get_node("WorldMap").HpContainer=get_node("UI/HpContainer")
 	pass
 	#CameraNode=get_node("Camera2D")
 

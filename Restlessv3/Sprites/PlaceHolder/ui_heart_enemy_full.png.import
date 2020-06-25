@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/floor.png-feb12a9f4e6837d1d2b32c55c8b0104b.stex"
+path="res://.import/ui_heart_enemy_full.png-8993f52e3704f17ecb829ef7df5b7343.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Sprites/PlaceHolder/floor.png"
-dest_files=[ "res://.import/floor.png-feb12a9f4e6837d1d2b32c55c8b0104b.stex" ]
+source_file="res://Sprites/PlaceHolder/ui_heart_enemy_full.png"
+dest_files=[ "res://.import/ui_heart_enemy_full.png-8993f52e3704f17ecb829ef7df5b7343.stex" ]
 
 [params]
 
